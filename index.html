@@ -36,6 +36,19 @@ export const createNumSphere = (num, size) => {
   return g;
 };
 
+export const createNumSphere2 = (size) => {
+  const g = new THREE.Group();
+  const geo = new THREE.SphereGeometry(size, 15, 32);
+  //const color = 0xff0000;
+  const color = 0xFF0000;
+  const mat = new THREE.MeshBasicMaterial({ color, opacity: 0.4, transparent: true });
+  const mesh = new THREE.Mesh(geo, mat);
+  g.add(mesh);
+  const txt = createTextMesh("X" , 0, 0, 0, 0xFF0000);
+  g.add(txt);
+  return g;
+};
+
 class One2Twenty extends AR {
   async main() {
     // test geometry
@@ -67,9 +80,13 @@ class One2Twenty extends AR {
 
       const size = 0.1;
       const ns = 20;
+      const ns2 = 10;
       const objs = [];
       this.objs = objs;
+      const objs2 = [];
+      this.objs2 = objs2;
       const pnt = [];
+      const pnt2 = [];
       const rndw = 1.2;
       //	const rndw = 0.8
       for (let i = 0; i < ns; i++) {
@@ -96,6 +113,32 @@ class One2Twenty extends AR {
         //console.log(p);
         this.scene.add(obj);
         objs.push(obj);
+      }
+
+      for (let i = 0; i < ns2; i++) {
+        const x = Math.random() * rndw - rndw / 2;
+        //const y = Math.random() * rndw + .5
+        const y = Math.random() * rndw * .7 - .2; // + .3;
+        const z = Math.random() * rndw - 2.0;
+        const q = new THREE.Vector3(x, y, z);
+        let flg = false;
+        for (let j = 0; j < pnt2.length; j++) {
+          if (pnt2[j].distanceTo(q) < size * 2) {
+            flg = true;
+            break;
+          }
+        }
+        if (flg) {
+          i--;
+          continue;
+        }
+        pnt2[i] = q;
+
+        const obj2 = createNumSphere2(size);
+        obj2.position.copy(q);
+        //console.log(p);
+        this.scene.add(obj2);
+        objs2.push(obj2);
       }
 
       let cnt = 0;
