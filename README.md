@@ -1,4 +1,4 @@
-# vr-one2twenty
+# vr-one2twenty Ver.kuwa
 - https://kuwachi626.github.io/vr-one2twenty/
 # original
 - https://code4fukui.github.io/vr-one2twenty/
