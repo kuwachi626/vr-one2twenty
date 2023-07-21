@@ -60,10 +60,11 @@ class One2Twenty extends AR {
     this.scene.add(mesh);
     */
 
-    const ss = new SoundSystem("sound/", ["start", "pon", "clear", "success", "decide"]);
+    const ss = new SoundSystem("sound/", ["start", "pon", "clear", "success", "decide", "bubu"]);
 
     let besttime = parseFloat(localStorage.getItem("besttime")) || 100;
     let lasttime = 0;
+    let cleartime = 0;
     for (;;) {
       const tz = -1.5;
       const title = new THREE.Group();
@@ -80,7 +81,7 @@ class One2Twenty extends AR {
 
       const size = 0.1;
       const ns = 20;
-      const ns2 = 10;
+      const ns2 = 20;
       const objs = [];
       this.objs = objs;
       const objs2 = [];
@@ -142,6 +143,7 @@ class One2Twenty extends AR {
       }
 
       let cnt = 0;
+      let cnt2 = 0; 
       const startt = new Date().getTime();
 
       // debug
@@ -163,12 +165,38 @@ class One2Twenty extends AR {
           const hp = new THREE.Vector3();
           hp.setFromMatrixPosition(ctrl.matrixWorld);
           const d = hp.distanceTo(pnt[cnt]);
+          for (let j = 0; j < pnt2.length; j++) {
+            let e = hp.distanceTo(pnt2[j]);
+            if (e <= size * 1.2) {
+              this.scene.remove(objs2[j]);
+              objs2.splice(j, 1);
+              pnt2.splice(j, 1);
+              ss.play("bubu");
+              cnt2++;
+            }
+          }
+          
           if (d <= size * 1.2) {
             this.scene.remove(objs[cnt]);
             ss.play("pon");
             cnt++;
             if (cnt == ns) {
-              lasttime = (new Date().getTime() - startt) / 1000;
+              for (let j = 0; j < pnt2.length; j++) {
+                this.scene.remove(objs2[j]);
+              }
+              ss.play("clear");
+              cleartime = (new Date().getTime() - startt) / 1000;
+              lasttime = cleartime + cnt2 * 5;
+              const result = new THREE.Group();
+              result.add(createTextMesh("CLEAR! ", 0, 1.7, tz));
+              result.add(createTextMesh("clear time: " + cleartime.toFixed(2) + "sec", 0, 1.4, tz));
+              result.add(createTextMesh("miss: " + cnt2 + " * 5sec", 0, 1.1, tz, 0xFF0000));
+              result.add(createTextMesh("result time: " + lasttime.toFixed(2) + "sec", 0, 0.8, tz));
+              this.scene.add(result);
+              await sleep(1000);
+              await this.waitSelect();
+              this.scene.remove(result);
+
               let mes = null;
               if (lasttime < besttime) {
                 besttime = lasttime;
@@ -176,8 +204,7 @@ class One2Twenty extends AR {
                 mes = "HIGH SCORE! " + lasttime.toFixed(2) + "sec";
                 ss.play("success");
               } else {
-                mes = "CLEAR! " + lasttime.toFixed(2) + "sec";
-                ss.play("clear");
+                mes = "Let's do our best next time!! ";
               }
               const meshm = createTextMesh(mes, 0, 1.0, tz);
               this.scene.add(meshm);
