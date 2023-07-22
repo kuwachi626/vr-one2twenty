@@ -270,9 +270,6 @@ class One2Twenty extends AR {
       A: for (;;) {
         await sleep(1000 / 60);
         for (let i = 0; i < this.ctrls.length; i++) {
-          const count = new THREE.Vector3(x, y, z);
-          count.add(createTextMesh("next:", 0, 0.4, 2));
-	  this.scene.add(count);
           const ctrl = this.ctrls[i];
           const hp = new THREE.Vector3();
           hp.setFromMatrixPosition(ctrl.matrixWorld);
