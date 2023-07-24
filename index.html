@@ -49,6 +49,17 @@ export const createNumSphere2 = (size) => {
   return g;
 };
 
+export const createNumSphere3 = (num, size, color) => {
+  const g = new THREE.Group();
+  const geo = new THREE.SphereGeometry(size, 15, 32);
+  const mat = new THREE.MeshBasicMaterial({ color, opacity: 0.6, transparent: true });
+  const mesh = new THREE.Mesh(geo, mat);
+  g.add(mesh);
+  const txt = createTextMesh("" + num, 0, 0, 0, 0x000000);
+  g.add(txt);
+  return g;
+};
+
 class One2Twenty extends AR {
   async main() {
     // test geometry
@@ -60,8 +71,9 @@ class One2Twenty extends AR {
     this.scene.add(mesh);
     */
 
-    const ss = new SoundSystem("sound/", ["start", "pon", "clear", "success", "decide", "bubu", "levelselect", "nomal", "hard", "veryhard", "nexttime"]);
+    const ss = new SoundSystem("sound/", ["start", "pon", "clear", "success", "decide", "bubu", "levelselect", "nomal", "hard", "veryhard", "nexttime", "pipipipi"]);
     const levellist = ["nomal", "hard", "veryHard"];
+    const colorlist = [0x008000, 0xffff00, 0xFF0000];
 
     
     let besttime = 0;
@@ -76,7 +88,7 @@ class One2Twenty extends AR {
       let besttime3 = parseFloat(localStorage.getItem("besttime3")) || 100;
       const tz = -1.5;
       const title = new THREE.Group();
-      title.add(createTextMesh("one to twenty", 0, 0.4, tz));
+      title.add(createTextMesh("one to twenty", 0, 0.2, tz));
 
       this.scene.add(title);
 
@@ -111,7 +123,7 @@ class One2Twenty extends AR {
         const p = new THREE.Vector3(x, y, z);
         let flg = false;
         for (let j = 0; j < pnt.length; j++) {
-          if (pnt[j].distanceTo(p) < size * 2) {
+          if (pnt[j].distanceTo(p) < 0.2 * 2) {
             flg = true;
             break;
           }
@@ -122,7 +134,7 @@ class One2Twenty extends AR {
         }
         pnt[i] = p;
 
-        const obj = createNumSphere(i + 1, size);
+        const obj = createNumSphere3(i + 1, 0.2, colorlist[i]);
         obj.position.copy(p);
         this.scene.add(obj);
         objs.push(obj);
@@ -152,7 +164,7 @@ class One2Twenty extends AR {
         objs2[i] = obj2;
       }
 
-      B: for (;;) {
+      A: for (;;) {
         await sleep(1000 / 60);
         for (let i = 0; i < this.ctrls.length; i++) {
             const ctrl = this.ctrls[i];
@@ -160,10 +172,10 @@ class One2Twenty extends AR {
             hp.setFromMatrixPosition(ctrl.matrixWorld);
             for (let j = 0; j < pnt.length; j++) {
               let e = hp.distanceTo(pnt[j]);
-              if (e <= size * 1.2) {
+              if (e <= 0.2 * 1.2) {
                 level = j + 1;
                 this.scene.remove(levelselect);
-                break B;
+                break A;
               }
             }
         }
@@ -265,9 +277,13 @@ class One2Twenty extends AR {
         debugmesh = createTextMesh(s, 0, 1.5, tz);
         this.scene.add(debugmesh);
       };
+      let next = createTextMesh("NEXT:" + (cnt+1), 0, 2.0, tz, 0xFFFFFF);
+      let miss = createTextMesh("MISS:" + (cnt2), 0, 1.8, tz, 0xFF0000);
+      this.scene.add(next);
+      this.scene.add(miss);
 
       // game
-      A: for (;;) {
+      B: for (;;) {
         await sleep(1000 / 60);
         for (let i = 0; i < this.ctrls.length; i++) {
           const ctrl = this.ctrls[i];
@@ -281,26 +297,49 @@ class One2Twenty extends AR {
               objs2.splice(j, 1);
               pnt2.splice(j, 1);
               ss.play("bubu");
+              this.scene.remove(miss);
               cnt2++;
+              miss = createTextMesh("MISS:" + cnt2, 0, 1.8, tz, 0xFF0000);
+              this.scene.add(miss);
+              if (cnt2 == ns2) {
+              for (let j = 0; j < pnt.length; j++) {
+                this.scene.remove(objs[j]);
+              }
+              ss.play("pipipipi");
+              this.scene.remove(next);
+              this.scene.remove(miss);
+              const fail = createTextMesh("GAME OVER", 0, 0.2, tz, 0xFF0000);
+              this.scene.add(fail);
+              await sleep(1000);
+              await this.waitSelect();
+              ss.play("decide");
+              this.scene.remove(fail);
+              break B;
+              }
             }
           }
           
           if (d <= size * 1.2) {
             this.scene.remove(objs[cnt]);
+            this.scene.remove(next);
             ss.play("pon");
             cnt++;
+            next = createTextMesh("NEXT:" + (cnt+1), 0, 2.0, tz, 0xFFFFFF);
+            this.scene.add(next);
             if (cnt == ns) {
               for (let j = 0; j < pnt2.length; j++) {
                 this.scene.remove(objs2[j]);
               }
               ss.play("clear");
+              this.scene.remove(next);
+              this.scene.remove(miss);
               cleartime = (new Date().getTime() - startt) / 1000;
               lasttime = cleartime + cnt2 * 5;
               const result = new THREE.Group();
-              result.add(createTextMesh("CLEAR! ", 0, 1.3, tz));
-              result.add(createTextMesh("clear time: " + cleartime.toFixed(2) + "sec", 0, 1.0, tz));
-              result.add(createTextMesh("miss: " + cnt2 + " * 5sec", 0, 0.7, tz, 0xFF0000));
-              result.add(createTextMesh("result time: " + lasttime.toFixed(2) + "sec", 0, 0.4, tz));
+              result.add(createTextMesh("CLEAR! ", 0, 0.7, tz));
+              result.add(createTextMesh("clear time: " + cleartime.toFixed(2) + "sec", 0, 0.4, tz));
+              result.add(createTextMesh("miss: " + cnt2 + " * 5sec", 0, 0.1, tz, 0xFF0000));
+              result.add(createTextMesh("result time: " + lasttime.toFixed(2) + "sec", 0, -0.2, tz));
               this.scene.add(result);
               await sleep(1000);
               await this.waitSelect();
@@ -329,13 +368,13 @@ class One2Twenty extends AR {
                     lasttime3 = lasttime;
                     break;
               }
-              const meshm = createTextMesh(mes, 0, 1.0, tz);
+              const meshm = createTextMesh(mes, 0, 0.2, tz);
               this.scene.add(meshm);
               await sleep(1000);
               await this.waitSelect();
               ss.play("decide");
               this.scene.remove(meshm);
-              break A;
+              break B;
             }
           }
         }
