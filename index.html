@@ -71,7 +71,7 @@ class One2Twenty extends AR {
     this.scene.add(mesh);
     */
 
-    const ss = new SoundSystem("sound/", ["start", "pon", "clear", "success", "decide", "bubu", "levelselect", "nomal", "hard", "veryhard", "EXPART", "nexttime", "pipipipi"]);
+    const ss = new SoundSystem("sound/", ["start", "pon", "clear", "success", "decide", "bubu", "levelselect", "nomal", "hard", "veryhard", "EXPART", "nexttime", "pipipipi", "hint"]);
     const levellist = ["NOMAL", "HARD", "VERYHARD", "EXPERT"];
     const colorlist = [0x008000, 0xffff00, 0xFF0000, 0x800080];
 
@@ -298,7 +298,15 @@ class One2Twenty extends AR {
 
       let cnt = 0;
       let cnt2 = 0; 
+      let count = 0;
       const startt = new Date().getTime();
+      let checktime = new Date().getTime();
+      let playtime = 0;
+      let counttime = 0;
+      const origin = new THREE.Vector3(0, 0, 0);
+      const length = 0.5;
+      const hex = 0xffff00;
+
 
       // debug
       let debugmesh = null;
@@ -311,17 +319,27 @@ class One2Twenty extends AR {
       };
       let next = createTextMesh("NEXT:" + (cnt+1), 0, 2.0, tz, 0xFFFFFF);
       let miss = createTextMesh("MISS:" + (cnt2), 0, 1.8, tz, 0xFF0000);
+      let ptime = createTextMesh("time:" + playtime.toFixed(2), 0, 1.6, tz, 0xFFFFFF);
       this.scene.add(next);
       this.scene.add(miss);
+      this.scene.add(ptime);
 
       // game
       B: for (;;) {
         await sleep(1000 / 60);
         for (let i = 0; i < this.ctrls.length; i++) {
+          playtime = (new Date().getTime() - startt) / 1000;
+          counttime = (new Date().getTime() - checktime) / 1000;
           const ctrl = this.ctrls[i];
           const hp = new THREE.Vector3();
           hp.setFromMatrixPosition(ctrl.matrixWorld);
           const d = hp.distanceTo(pnt[cnt]);
+          if (counttime > 10 && count == 0) {
+            ss.play("hint");
+            var arrowHelper = new THREE.ArrowHelper(origin, pnt[cnt], length, hex, -0.5);
+            this.scene.add(arrowHelper);
+            count++;
+          }
           for (let j = 0; j < pnt2.length; j++) {
             let e = hp.distanceTo(pnt2[j]);
             if (e <= size * 1.2) {
@@ -330,9 +348,12 @@ class One2Twenty extends AR {
               pnt2.splice(j, 1);
               ss.play("bubu");
               this.scene.remove(miss);
+              this.scene.remove(ptime);
               cnt2++;
               miss = createTextMesh("MISS:" + cnt2, 0, 1.8, tz, 0xFF0000);
+              ptime = createTextMesh("time:" + playtime.toFixed(2), 0, 1.6, tz, 0xFFFFFF);
               this.scene.add(miss);
+              this.scene.add(ptime);
               if (cnt2 == 10) {
               for (let j = 0; j < pnt2.length; j++) {
                 this.scene.remove(objs[j]);
@@ -341,6 +362,7 @@ class One2Twenty extends AR {
               ss.play("pipipipi");
               this.scene.remove(next);
               this.scene.remove(miss);
+              this.scene.remove(ptime);
               const fail = createTextMesh("GAME OVER", 0, 0.2, tz, 0xFF0000);
               this.scene.add(fail);
               await sleep(1000);
@@ -355,10 +377,16 @@ class One2Twenty extends AR {
           if (d <= size * 1.2) {
             this.scene.remove(objs[cnt]);
             this.scene.remove(next);
+            this.scene.remove(ptime);
+            this.scene.remove(arrowHelper);
             ss.play("pon");
             cnt++;
+            count = 0;
             next = createTextMesh("NEXT:" + (cnt+1), 0, 2.0, tz, 0xFFFFFF);
+            ptime = createTextMesh("time:" + playtime.toFixed(2), 0, 1.6, tz, 0xFFFFFF);
             this.scene.add(next);
+            this.scene.add(ptime);
+            checktime = new Date().getTime();
             if (cnt == ns) {
               for (let j = 0; j < pnt2.length; j++) {
                 this.scene.remove(objs2[j]);
@@ -366,6 +394,7 @@ class One2Twenty extends AR {
               ss.play("clear");
               this.scene.remove(next);
               this.scene.remove(miss);
+              this.scene.remove(ptime);
               cleartime = (new Date().getTime() - startt) / 1000;
               lasttime = cleartime + cnt2 * 5;
               const result = new THREE.Group();
