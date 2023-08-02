@@ -23,6 +23,7 @@ import { createTextMesh } from "./createTextMesh.mjs";
 import { sleep } from "https://js.sabae.cc/sleep.js";
 import { SoundSystem } from "./SoundSystem.mjs";
 
+//球番号
 export const createNumSphere = (num, size) => {
   const g = new THREE.Group();
   const geo = new THREE.SphereGeometry(size, 15, 32);
@@ -36,11 +37,10 @@ export const createNumSphere = (num, size) => {
   return g;
 };
 
-export const createNumSphere2 = (size) => {
+//ミス球
+export const createNumSphere2 = (size, color) => {
   const g = new THREE.Group();
   const geo = new THREE.SphereGeometry(size, 15, 32);
-  //const color = 0xff0000;
-  const color = 0xFF0000;
   const mat = new THREE.MeshBasicMaterial({ color, opacity: 0.4, transparent: true });
   const mesh = new THREE.Mesh(geo, mat);
   g.add(mesh);
@@ -49,6 +49,7 @@ export const createNumSphere2 = (size) => {
   return g;
 };
 
+//難易度選択用
 export const createNumSphere3 = (num, size, color) => {
   const g = new THREE.Group();
   const geo = new THREE.SphereGeometry(size, 15, 32);
@@ -60,20 +61,24 @@ export const createNumSphere3 = (num, size, color) => {
   return g;
 };
 
+//スタートなど選択用
+export const createNumSphere4 = (str, size, color) => {
+  const g = new THREE.Group();
+  const geo = new THREE.SphereGeometry(size, 15, 32);
+  const mat = new THREE.MeshBasicMaterial({ color, opacity: 0.6, transparent: true });
+  const mesh = new THREE.Mesh(geo, mat);
+  g.add(mesh);
+  const txt = createTextMesh(str, 0, 0, 0, 0x000000);
+  g.add(txt);
+  return g;
+};
+
 class One2Twenty extends AR {
   async main() {
-    // test geometry
-    /*
-    const geo = new THREE.SphereGeometry(1, 64, 20);
-    const mat = new THREE.MeshBasicMaterial({ color: 0xff0000, opacity: 0.5, transparent: true });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(0, 0, -5);
-    this.scene.add(mesh);
-    */
 
-    const ss = new SoundSystem("sound/", ["start", "pon", "clear", "success", "decide", "bubu", "levelselect", "nomal", "hard", "veryhard", "EXPART", "nexttime", "pipipipi", "hint"]);
+    const ss = new SoundSystem("sound/", ["start", "pon", "clear", "success", "decide", "bubu", "levelselect", "nomal", "hard", "veryhard", "EXPART", "nexttime", "pipipipi", "hint", "cancel", "continue"]);
     const levellist = ["NOMAL", "HARD", "VERYHARD", "EXPERT"];
-    const colorlist = [0x008000, 0xffff00, 0xFF0000, 0x800080];
+    const colorlist = [0x008000, 0xffff00, 0xFF0000, 0x800080]; //緑、黄、赤、紫
 
     
     let besttime = 0;
@@ -88,18 +93,8 @@ class One2Twenty extends AR {
       let besttime2 = parseFloat(localStorage.getItem("besttime2")) || 300;
       let besttime3 = parseFloat(localStorage.getItem("besttime3")) || 300;
       let besttime4 = parseFloat(localStorage.getItem("besttime4")) || 300;
+
       const tz = -1.5;
-      const title = new THREE.Group();
-      title.add(createTextMesh("one to twenty", 0, 0.2, tz));
-
-      this.scene.add(title);
-
-      //await sleep(1000);
-      await this.waitSelect();
-      ss.play("levelselect");
-
-      this.scene.remove(title);
-
       const ns = 20;
       let ns2 = 0;
       const size = 0.1;
@@ -111,7 +106,59 @@ class One2Twenty extends AR {
       const pnt2 = [];
       const rndw = 1.3;
       let level = 0;
-      
+
+      const staposi = new THREE.Vector3(0, -0.3, -0.5);
+      const start = createNumSphere4("S", size, 0x00ffff);
+      start.position.copy(staposi);
+      const starttxt = createTextMesh("Start", 0, -0.1, -0.5);
+
+      const resposi = new THREE.Vector3(0, 0, 1);
+      const reset = createNumSphere4("R", size, 0x800080);
+      reset.position.copy(resposi);
+
+      const retposi = new THREE.Vector3(-0.4, -0.3, -0.5);
+      const retry = createNumSphere4("Y", size, 0x00ffff);
+      retry.position.copy(retposi);
+
+      const finposi = new THREE.Vector3(0.4, -0.3, -0.5);
+      const finish = createNumSphere4("N", size, 0xFF0000);
+      finish.position.copy(finposi);
+
+      const nexposi = new THREE.Vector3(0, -0.3, -0.5);
+      const next = createNumSphere4("N", size, 0x00ff00);
+      next.position.copy(nexposi);
+      const nexttxt = createTextMesh("Next", 0, -0.1, -0.5);
+
+      const conti = new THREE.Group();
+      conti.add(createTextMesh("Continue?", 0, 0.1, -0.5));
+      conti.add(createTextMesh("YES", -0.4, -0.1, -0.5));
+      conti.add(createTextMesh("NO", 0.4, -0.1, -0.5));
+
+      //タイトル
+      const title  = createTextMesh("one to twenty", 0, 0.2, tz);
+
+      this.scene.add(title);
+      this.scene.add(start);
+      this.scene.add(starttxt);
+
+      A: for (;;) {
+        await sleep(1000 / 60);
+        for (let i = 0; i < this.ctrls.length; i++) {
+            const ctrl = this.ctrls[i];
+            const hp = new THREE.Vector3();
+            hp.setFromMatrixPosition(ctrl.matrixWorld);
+            let e = hp.distanceTo(staposi);
+            if (e <= size * 1.2) {
+              this.scene.remove(title);
+              this.scene.remove(start);
+              this.scene.remove(starttxt);
+              ss.play("levelselect");
+              break A;
+            }
+        }
+      }
+    
+      //難易度選択
       const levelselect = new THREE.Group();
       levelselect.add(createTextMesh("1:NOMAL             *0", 0, 1.0, tz));
       levelselect.add(createTextMesh("2:HARD              *30", 0, 0.7, tz));
@@ -124,17 +171,6 @@ class One2Twenty extends AR {
           const y = -0.2;
           const z = 1;
           const p = new THREE.Vector3(x, y, z);
-          let flg = false;
-          for (let j = 0; j < pnt.length; j++) {
-            if (pnt[j].distanceTo(p) < 0.2 * 2) {
-              flg = true;
-              break;
-            }
-          }
-          if (flg) {
-            i--;
-            continue;
-          }
           pnt[i] = p;
 
           const obj = createNumSphere3(i + 1, 0.2, colorlist[i]);
@@ -146,17 +182,6 @@ class One2Twenty extends AR {
           const y = -0.2;
           const z = -1;
           const p = new THREE.Vector3(x, y, z);
-          let flg = false;
-          for (let j = 0; j < pnt.length; j++) {
-            if (pnt[j].distanceTo(p) < 0.2 * 2) {
-              flg = true;
-              break;
-            }
-          }
-          if (flg) {
-            i--;
-            continue;
-          }
           pnt[i] = p;
 
           const obj = createNumSphere3(i + 1, 0.2, colorlist[i]);
@@ -171,20 +196,9 @@ class One2Twenty extends AR {
         const y = 1.0 - 0.3 * i;
         const z = tz;
         const q = new THREE.Vector3(x, y, z);
-        let flg = false;
-        for (let j = 0; j < pnt2.length; j++) {
-          if (pnt2[j].distanceTo(q) < size * 2) {
-            flg = true;
-            break;
-          }
-        }
-        if (flg) {
-          i--;
-          continue;
-        }
         pnt2[i] = q;
 
-        const obj2 = createNumSphere2(size);
+        const obj2 = createNumSphere2(size, 0xFF0000);
         obj2.position.copy(q);
         this.scene.add(obj2);
         objs2[i] = obj2;
@@ -212,244 +226,392 @@ class One2Twenty extends AR {
       }
       pnt2.splice(0);
       switch (level) {
-        case 1:
+        case 1: //nomal ミス球0個
           ns2 = 0;
           besttime = besttime1;
           lasttime = lasttime1;
           ss.play("nomal");
           break;
-        case 2:
+        case 2: //hard ミス球30個
           ns2 = 30;
           besttime = besttime2;
           lasttime = lasttime2;
           ss.play("hard");
           break;
-        case 3:
+        case 3: //veryhard ミス球60個
           ns2 = 60;
           besttime = besttime3;
           lasttime = lasttime3;
           ss.play("veryhard");
           break;
-        case 4:
+        case 4: //expart ミス球200個
           ns2 = 200;
           besttime = besttime4;
           lasttime = lasttime4;
           ss.play("EXPART");
           break;
       }
-      const choice = new THREE.Group();
-      choice.add(createTextMesh(levellist[level-1], 0, 0.5, tz, colorlist[level-1]));
-      choice.add(createTextMesh("best time: " + besttime.toFixed(2) + "sec", 0, 0.2, tz));
-      choice.add(createTextMesh("latest time: " + (lasttime ? lasttime.toFixed(2) : "-") + "sec", 0, -0.1, tz));
-      this.scene.add(choice);
-      await this.waitSelect();
-      
 
-      this.scene.remove(choice);
-      ss.play("start");
+      //スタート前タイム確認
+      ready: for (;;) {
+        const choice = new THREE.Group();
+        choice.add(createTextMesh(levellist[level-1], 0, 0.5, tz, colorlist[level-1]));
+        choice.add(createTextMesh("best time: " + besttime.toFixed(2) + "sec", 0, 0.2, tz));
+        choice.add(createTextMesh("latest time: " + (lasttime ? lasttime.toFixed(2) : "-") + "sec", 0, -0.1, tz));
+        this.scene.add(choice);
+        this.scene.add(start);
+        this.scene.add(starttxt);
 
-      for (let i = 0; i < ns; i++) {
-        const x = Math.random() * rndw - rndw / 2;
-        const y = Math.random() * rndw * 1.2 - 1.2;
-        const z = Math.random() * 1.2 - 2.0;
-        const p = new THREE.Vector3(x, y, z);
-        let flg = false;
-        for (let j = 0; j < pnt.length; j++) {
-          if (pnt[j].distanceTo(p) < size * 2) {
-            flg = true;
-            break;
+        A: for (;;) {
+          await sleep(1000 / 60);
+          for (let i = 0; i < this.ctrls.length; i++) {
+              const ctrl = this.ctrls[i];
+              const hp = new THREE.Vector3();
+              hp.setFromMatrixPosition(ctrl.matrixWorld);
+              let e = hp.distanceTo(staposi);
+              if (e <= size * 1.2) {
+                this.scene.remove(choice);
+                this.scene.remove(start);
+                this.scene.remove(starttxt);
+                ss.play("start");
+                break A;
+              }
           }
         }
-        if (flg) {
-          i--;
-          continue;
-        }
-        pnt[i] = p;
-
-        const obj = createNumSphere(i + 1, size);
-        obj.position.copy(p);
-        this.scene.add(obj);
-        objs[i] = obj;
-      }
-
-      for (let i = 0; i < ns2; i++) {
-        const x = Math.random() * rndw - rndw / 2;
-        const y = Math.random() * rndw * 1.2 - 1.2;
-        const z = Math.random() * 1.2 - 2.0;
-        const q = new THREE.Vector3(x, y, z);
-        let flg = false;
-        for (let j = 0; j < pnt2.length; j++) {
-          if (pnt2[j].distanceTo(q) < size * 2) {
-            flg = true;
-            break;
+        
+        //番号球
+        for (let i = 0; i < ns; i++) {
+          const x = Math.random() * rndw - rndw / 2;
+          const y = Math.random() * rndw * 1.2 - 1.2;
+          const z = Math.random() * 1.2 - 2.0;
+          const p = new THREE.Vector3(x, y, z);
+          let flg = false;
+          for (let j = 0; j < pnt.length; j++) {
+            if (pnt[j].distanceTo(p) < size * 2) {
+              flg = true;
+              break;
+            }
           }
-        }
-        if (flg) {
-          i--;
-          continue;
-        }
-        pnt2[i] = q;
-
-        const obj2 = createNumSphere2(size);
-        obj2.position.copy(q);
-        this.scene.add(obj2);
-        objs2[i] = obj2;
-      }
-
-      let cnt = 0;
-      let cnt2 = 0; 
-      let count = 0;
-      const startt = new Date().getTime();
-      let checktime = new Date().getTime();
-      let playtime = 0;
-      let counttime = 0;
-      const origin = new THREE.Vector3(0, 0, 0);
-      const length = 0.5;
-      const hex = 0xffff00;
-
-
-      // debug
-      let debugmesh = null;
-      const debug = (s) => {
-        if (debugmesh) {
-          this.scene.remove(debugmesh);
-        }
-        debugmesh = createTextMesh(s, 0, 1.5, tz);
-        this.scene.add(debugmesh);
-      };
-      let next = createTextMesh("NEXT:" + (cnt+1), 0, 2.0, tz, 0xFFFFFF);
-      let miss = createTextMesh("MISS:" + (cnt2), 0, 1.8, tz, 0xFF0000);
-      let ptime = createTextMesh("time:" + playtime.toFixed(2), 0, 1.6, tz, 0xFFFFFF);
-      this.scene.add(next);
-      this.scene.add(miss);
-      this.scene.add(ptime);
-
-      // game
-      B: for (;;) {
-        await sleep(1000 / 60);
-        for (let i = 0; i < this.ctrls.length; i++) {
-          playtime = (new Date().getTime() - startt) / 1000;
-          counttime = (new Date().getTime() - checktime) / 1000;
-          const ctrl = this.ctrls[i];
-          const hp = new THREE.Vector3();
-          hp.setFromMatrixPosition(ctrl.matrixWorld);
-          const d = hp.distanceTo(pnt[cnt]);
-          if (counttime > 10 && count == 0) {
-            ss.play("hint");
-            var arrowHelper = new THREE.ArrowHelper(origin, pnt[cnt], length, hex, -0.5);
-            this.scene.add(arrowHelper);
-            count++;
+          if (flg) {
+            i--;
+            continue;
           }
+          pnt[i] = p;
+
+          const obj = createNumSphere(i + 1, size);
+          obj.position.copy(p);
+          this.scene.add(obj);
+          objs[i] = obj;
+        }
+
+        //ミス球
+        for (let i = 0; i < ns2; i++) {
+          const x = Math.random() * rndw - rndw / 2;
+          const y = Math.random() * rndw * 1.2 - 1.2;
+          const z = Math.random() * 1.2 - 2.0;
+          const q = new THREE.Vector3(x, y, z);
+          let flg = false;
           for (let j = 0; j < pnt2.length; j++) {
-            let e = hp.distanceTo(pnt2[j]);
-            if (e <= size * 1.2) {
-              this.scene.remove(objs2[j]);
-              objs2.splice(j, 1);
-              pnt2.splice(j, 1);
-              ss.play("bubu");
-              this.scene.remove(miss);
-              this.scene.remove(ptime);
-              cnt2++;
-              miss = createTextMesh("MISS:" + cnt2, 0, 1.8, tz, 0xFF0000);
-              ptime = createTextMesh("time:" + playtime.toFixed(2), 0, 1.6, tz, 0xFFFFFF);
-              this.scene.add(miss);
-              this.scene.add(ptime);
-              if (cnt2 == 10) {
-              for (let j = 0; j < pnt2.length; j++) {
+            if (pnt2[j].distanceTo(q) < size * 2) {
+              flg = true;
+              break;
+            }
+          }
+          for (let k = 0; k < pnt.length; k++) {
+            if (pnt[k].distanceTo(q) < size) {
+              flg = true;
+              break;
+            }
+          }
+          if (flg) {
+            i--;
+            continue;
+          }
+          pnt2[i] = q;
+
+          const obj2 = createNumSphere2(size, 0xFF0000);
+          obj2.position.copy(q);
+          this.scene.add(obj2);
+          objs2[i] = obj2;
+        }
+
+        let cnt = 0;
+        let cnt2 = 0; 
+        let count = 0;
+        const startt = new Date().getTime();
+        let checktime = new Date().getTime();
+        let playtime = 0;
+        let counttime = 0;
+        const origin = new THREE.Vector3(0, 0, 0);
+        const length = 0.5;
+        const hex = 0xffff00;
+
+
+        // debug
+        let debugmesh = null;
+        const debug = (s) => {
+          if (debugmesh) {
+            this.scene.remove(debugmesh);
+          }
+          debugmesh = createTextMesh(s, 0, 1.5, tz);
+          this.scene.add(debugmesh);
+        };
+
+        let nextnum = createTextMesh("NEXT:" + (cnt+1), 0, 2.0, tz, 0xFFFFFF);
+        let miss = createTextMesh("MISS:" + (cnt2), 0, 1.8, tz, 0xFF0000);
+        let ptime = createTextMesh("time:" + playtime.toFixed(2), 0, 1.6, tz, 0xFFFFFF);
+        this.scene.add(nextnum);
+        this.scene.add(miss);
+        this.scene.add(ptime);
+        this.scene.add(reset);
+
+        // game
+        game: for (;;) {
+          await sleep(1000 / 60);
+          for (let i = 0; i < this.ctrls.length; i++) {
+            playtime = (new Date().getTime() - startt) / 1000;
+            counttime = (new Date().getTime() - checktime) / 1000;
+            const ctrl = this.ctrls[i];
+            const hp = new THREE.Vector3();
+            hp.setFromMatrixPosition(ctrl.matrixWorld);
+            const d = hp.distanceTo(pnt[cnt]);
+            const fin = hp.distanceTo(resposi);
+            //10秒毎に矢印
+            if (counttime > 10 && count == 0) {
+              ss.play("hint");
+              var arrowHelper = new THREE.ArrowHelper(origin, pnt[cnt], length, hex, -0.5);
+              this.scene.add(arrowHelper);
+              count++;
+            }
+            //後ろの球（強制ゲームオーバー）
+            if (fin <= size * 1.2) {
+              for (let j = 0; j < pnt.length; j++) {
                 this.scene.remove(objs[j]);
+              }
+              for (let j = 0; j < pnt2.length; j++) {
                 this.scene.remove(objs2[j]);
               }
               ss.play("pipipipi");
-              this.scene.remove(next);
+              this.scene.remove(nextnum);
               this.scene.remove(miss);
               this.scene.remove(ptime);
-              const fail = createTextMesh("GAME OVER", 0, 0.2, tz, 0xFF0000);
+              this.scene.remove(arrowHelper);
+              this.scene.remove(reset);
+              const fail = createTextMesh("GAME OVER", 0, 0.4, tz, 0xFF0000);
               this.scene.add(fail);
-              await sleep(1000);
-              await this.waitSelect();
-              ss.play("decide");
-              this.scene.remove(fail);
-              break B;
+              this.scene.add(conti);
+              this.scene.add(finish);
+              this.scene.add(retry);
+
+              A: for (;;) {
+                await sleep(1000 / 60);
+                for (let i = 0; i < this.ctrls.length; i++) {
+                  const ctrl = this.ctrls[i];
+                  const hp = new THREE.Vector3();
+                  hp.setFromMatrixPosition(ctrl.matrixWorld);
+                  let e = hp.distanceTo(finposi);
+                  let ret = hp.distanceTo(retposi);
+                  if (e <= size * 1.2) {
+                    this.scene.remove(finish);
+                    this.scene.remove(retry);
+                    this.scene.remove(fail);
+                    this.scene.remove(conti);
+                    ss.play("cancel");
+                    break ready;
+                  }
+                  else if (ret <= size * 1.2) {
+                    this.scene.remove(finish);
+                    this.scene.remove(retry);
+                    this.scene.remove(fail);
+                    this.scene.remove(conti);
+                    ss.play("continue");
+                    break game;
+                  }
+                }
               }
             }
-          }
-          
-          if (d <= size * 1.2) {
-            this.scene.remove(objs[cnt]);
-            this.scene.remove(next);
-            this.scene.remove(ptime);
-            this.scene.remove(arrowHelper);
-            ss.play("pon");
-            cnt++;
-            count = 0;
-            next = createTextMesh("NEXT:" + (cnt+1), 0, 2.0, tz, 0xFFFFFF);
-            ptime = createTextMesh("time:" + playtime.toFixed(2), 0, 1.6, tz, 0xFFFFFF);
-            this.scene.add(next);
-            this.scene.add(ptime);
-            checktime = new Date().getTime();
-            if (cnt == ns) {
-              for (let j = 0; j < pnt2.length; j++) {
+            //ミス球判定
+            for (let j = 0; j < pnt2.length; j++) {
+              let e = hp.distanceTo(pnt2[j]);
+              if (e <= size) {
                 this.scene.remove(objs2[j]);
-              }
-              ss.play("clear");
-              this.scene.remove(next);
-              this.scene.remove(miss);
-              this.scene.remove(ptime);
-              cleartime = (new Date().getTime() - startt) / 1000;
-              lasttime = cleartime + cnt2 * 5;
-              const result = new THREE.Group();
-              if (cnt2 == 0) {
-                result.add(createTextMesh("PERFECT! ", 0, 0.7, tz, 0xffd700));
-              } else {
-                result.add(createTextMesh("CLEAR! ", 0, 0.7, tz));
-              }
-              result.add(createTextMesh("clear time: " + cleartime.toFixed(2) + "sec", 0, 0.4, tz));
-              result.add(createTextMesh("miss: " + cnt2 + " * 5sec", 0, 0.1, tz, 0xFF0000));
-              result.add(createTextMesh("result time: " + lasttime.toFixed(2) + "sec", 0, -0.2, tz));
-              if (lasttime < besttime) {
-                result.add(createTextMesh("(-" + (lasttime-besttime).toFixed(2) + "sec)", 1, -0.2, tz, 0x00ffff));
-              } else {
-                result.add(createTextMesh("(+" + (lasttime-besttime).toFixed(2) + "sec)", 1, -0.2, tz, 0xFF0000));
-              }
-              this.scene.add(result);
-              await sleep(1000);
-              await this.waitSelect();
-              this.scene.remove(result);
+                objs2.splice(j, 1);
+                pnt2.splice(j, 1);
+                ss.play("bubu");
+                this.scene.remove(miss);
+                this.scene.remove(ptime);
+                cnt2++;
+                miss = createTextMesh("MISS:" + cnt2, 0, 1.8, tz, 0xFF0000);
+                ptime = createTextMesh("time:" + playtime.toFixed(2), 0, 1.6, tz, 0xFFFFFF);
+                this.scene.add(miss);
+                this.scene.add(ptime);
+                //ゲームオーバー
+                if (cnt2 == 10) {
+                  for (let j = 0; j < pnt2.length; j++) {
+                    this.scene.remove(objs[j]);
+                    this.scene.remove(objs2[j]);
+                  }
+                  ss.play("pipipipi");
+                  this.scene.remove(nextnum);
+                  this.scene.remove(miss);
+                  this.scene.remove(ptime);
+                  this.scene.remove(arrowHelper);
+                  this.scene.remove(reset);
+                  const fail = createTextMesh("GAME OVER", 0, 0.4, tz, 0xFF0000);
+                  this.scene.add(fail);
+                  this.scene.add(finish);
+                  this.scene.add(retry);
+                  this.scene.add(conti);
 
-              let mes = null;
-              if (lasttime < besttime) {
-                besttime = lasttime;
-                mes = "HIGH SCORE! " + lasttime.toFixed(2) + "sec";
-                ss.play("success");
-              } else {
-                mes = "Let's do our best next time!! ";
-                ss.play("nexttime");
+                  A: for (;;) {
+                    await sleep(1000 / 60);
+                    for (let i = 0; i < this.ctrls.length; i++) {
+                      const ctrl = this.ctrls[i];
+                      const hp = new THREE.Vector3();
+                      hp.setFromMatrixPosition(ctrl.matrixWorld);
+                      let e = hp.distanceTo(finposi);
+                      let ret = hp.distanceTo(retposi);
+                      if (e <= size * 1.2) {
+                        this.scene.remove(finish);
+                        this.scene.remove(retry);
+                        this.scene.remove(fail);
+                        this.scene.remove(conti);
+                        ss.play("cancel");
+                        break ready;
+                      }
+                      else if (ret <= size * 1.2) {
+                        this.scene.remove(finish);
+                        this.scene.remove(retry);
+                        this.scene.remove(fail);
+                        this.scene.remove(conti);
+                        ss.play("continue");
+                        break game;
+                      }
+                    }
+                  }
+                }
               }
-              switch (level) {
-                  case 1:
-                    localStorage.setItem("besttime1", besttime);
-                    lasttime1 = lasttime;
-                    break;
-                  case 2:
-                    localStorage.setItem("besttime2", besttime);
-                    lasttime2 = lasttime;
-                    break;
-                  case 3:
-                    localStorage.setItem("besttime3", besttime);
-                    lasttime3 = lasttime;
-                    break;
-                  case 4:
-                    localStorage.setItem("besttime4", besttime);
-                    lasttime3 = lasttime;
-                    break;
+            }
+            //番号球判定
+            if (d <= size) {
+              this.scene.remove(objs[cnt]);
+              this.scene.remove(nextnum);
+              this.scene.remove(ptime);
+              this.scene.remove(arrowHelper);
+              ss.play("pon");
+              cnt++;
+              count = 0;
+              nextnum = createTextMesh("NEXT:" + (cnt+1), 0, 2.0, tz, 0xFFFFFF);
+              ptime = createTextMesh("time:" + playtime.toFixed(2), 0, 1.6, tz, 0xFFFFFF);
+              this.scene.add(nextnum);
+              this.scene.add(ptime);
+              checktime = new Date().getTime();
+              //クリアー
+              if (cnt == ns) {
+                for (let j = 0; j < pnt2.length; j++) {
+                  this.scene.remove(objs2[j]);
+                }
+                ss.play("clear");
+                this.scene.remove(nextnum);
+                this.scene.remove(miss);
+                this.scene.remove(ptime);
+                this.scene.remove(reset);
+                cleartime = (new Date().getTime() - startt) / 1000;
+                lasttime = cleartime + cnt2 * 5;
+                const result = new THREE.Group();
+                if (cnt2 == 0) {
+                  result.add(createTextMesh("PERFECT! ", 0, 0.7, tz, 0xffd700));
+                } else {
+                  result.add(createTextMesh("CLEAR! ", 0, 0.7, tz));
+                }
+                result.add(createTextMesh("clear time: " + cleartime.toFixed(2) + "sec", 0, 0.4, tz));
+                result.add(createTextMesh("miss: " + cnt2 + " * 5sec", 0, 0.1, tz, 0xFF0000));
+                result.add(createTextMesh("result time: " + lasttime.toFixed(2) + "sec", 0, -0.2, tz));
+                if (lasttime < besttime) {
+                  result.add(createTextMesh("(-" + (lasttime-besttime).toFixed(2) + "sec)", 1, -0.2, tz, 0x00ffff));
+                } else {
+                  result.add(createTextMesh("(+" + (lasttime-besttime).toFixed(2) + "sec)", 1, -0.2, tz, 0xFF0000));
+                }
+                this.scene.add(result);
+                this.scene.add(next);
+                this.scene.add(nexttxt);
+
+                A: for (;;) {
+                  await sleep(1000 / 60);
+                  for (let i = 0; i < this.ctrls.length; i++) {
+                      const ctrl = this.ctrls[i];
+                      const hp = new THREE.Vector3();
+                      hp.setFromMatrixPosition(ctrl.matrixWorld);
+                      let e = hp.distanceTo(nexposi);
+                      if (e <= size * 1.2) {
+                        this.scene.remove(result);
+                        this.scene.remove(next);
+                        this.scene.remove(nexttxt);
+                        break A;
+                      }
+                  }
+                }
+                
+                let mes = null;
+                if (lasttime < besttime) {
+                  besttime = lasttime;
+                  mes = "HIGH SCORE! " + lasttime.toFixed(2) + "sec";
+                  ss.play("success");
+                } else {
+                  mes = "Let's do our best next time!! ";
+                  ss.play("nexttime");
+                }
+                switch (level) {
+                    case 1:
+                      localStorage.setItem("besttime1", besttime);
+                      lasttime1 = lasttime;
+                      break;
+                    case 2:
+                      localStorage.setItem("besttime2", besttime);
+                      lasttime2 = lasttime;
+                      break;
+                    case 3:
+                      localStorage.setItem("besttime3", besttime);
+                      lasttime3 = lasttime;
+                      break;
+                    case 4:
+                      localStorage.setItem("besttime4", besttime);
+                      lasttime3 = lasttime;
+                      break;
+                }
+                const meshm = createTextMesh(mes, 0, 0.4, tz);
+                this.scene.add(meshm);
+                this.scene.add(finish);
+                this.scene.add(retry);
+                this.scene.add(conti);
+
+                A: for (;;) {
+                  await sleep(1000 / 60);
+                  for (let i = 0; i < this.ctrls.length; i++) {
+                    const ctrl = this.ctrls[i];
+                    const hp = new THREE.Vector3();
+                    hp.setFromMatrixPosition(ctrl.matrixWorld);
+                    let e = hp.distanceTo(finposi);
+                    let ret = hp.distanceTo(retposi);
+                    if (e <= size * 1.2) {
+                      this.scene.remove(finish);
+                      this.scene.remove(retry);
+                      this.scene.remove(meshm);
+                      this.scene.remove(conti);
+                      ss.play("cancel");
+                      break ready;
+                    }
+                    else if (ret <= size * 1.2) {
+                      this.scene.remove(finish);
+                      this.scene.remove(retry);
+                      this.scene.remove(meshm);
+                      this.scene.remove(conti);
+                      ss.play("continue");
+                      break game;
+                    }
+                  }
+                }
               }
-              const meshm = createTextMesh(mes, 0, 0.2, tz);
-              this.scene.add(meshm);
-              await sleep(1000);
-              await this.waitSelect();
-              ss.play("decide");
-              this.scene.remove(meshm);
-              break B;
             }
           }
         }
