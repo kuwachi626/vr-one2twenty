@@ -528,7 +528,7 @@ class One2Twenty extends AR {
                 result.add(createTextMesh("miss: " + cnt2 + " * 5sec", 0, 0.1, tz, 0xFF0000));
                 result.add(createTextMesh("result time: " + lasttime.toFixed(2) + "sec", 0, -0.2, tz));
                 if (lasttime < besttime) {
-                  result.add(createTextMesh("(-" + (lasttime-besttime).toFixed(2) + "sec)", 1, -0.2, tz, 0x00ffff));
+                  result.add(createTextMesh("(" + (lasttime-besttime).toFixed(2) + "sec)", 1, -0.2, tz, 0x00ffff));
                 } else {
                   result.add(createTextMesh("(+" + (lasttime-besttime).toFixed(2) + "sec)", 1, -0.2, tz, 0xFF0000));
                 }
